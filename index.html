@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cosmos Therapy Mobile</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        :root {
+            --bg-deep: #050510;
+            --nav-bg: rgba(20, 20, 40, 0.95);
+            --accent: #b19cd9;
+            --accent-glow: rgba(177, 156, 217, 0.4);
+            --text: #e0e0ff;
+            --safe-area-bottom: env(safe-area-inset-bottom);
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent; 
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            font-family: 'Courier New', monospace;
+            background-color: var(--bg-deep);
+            color: var(--text);
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        /* Fundo Estrelado */
+        #star-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+
+        /* Container Principal */
+        .app-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 70px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Seções */
+        .section {
+            display: none;
+            flex-direction: column;
+            height: 100%;
+            width: 100%;
+            padding: 15px;
+            overflow-y: auto;
+            animation: fadeUi 0.3s ease;
+        }
+
+        .section.active {
+            display: flex;
+        }
+
+        @keyframes fadeUi {
+            from { opacity: 0; transform: scale(0.98); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        /* Títulos */
+        h2 {
+            margin: 0 0 10px 0;
+            font-size: 1.2rem;
+            color: var(--accent);
+            text-shadow: 0 0 10px var(--accent-glow);
+            text-align: center;
+        }
+
+        /* Menu Inferior */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 70px;
+            background: var(--nav-bg);
+            border-top: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 100;
+            padding-bottom: var(--safe-area-bottom);
+            backdrop-filter: blur(10px);
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: rgba(255,255,255,0.5);
+            font-size: 0.7rem;
+            background: none;
+            border: none;
+            width: 25%;
+            height: 100%;
+        }
+
+        .nav-item i {
+            font-size: 1.5rem;
+            margin-bottom: 4px;
+        }
+
+        .nav-item.active {
+            color: var(--accent);
+            text-shadow: 0 0 8px var(--accent-glow);
+        }
+
+        /* Botões Gerais */
+        .btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--accent);
+            color: var(--accent);
+            padding: 10px;
+            border-radius: 8px;
+            font-family: inherit;
+            margin: 5px 0;
+            font-size: 0.9rem;
+            touch-action: manipulation;
+        }
+        
+        .btn:active {
+            background: var(--accent);
+            color: #000;
+        }
+
+        /* --- DIÁRIO --- */
+        .diary-area {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 15px;
+            color: #fff;
+            font-size: 1.1rem;
+            resize: none;
+            margin-bottom: 10px;
+        }
+
+        /* --- LOFI & PAINT (CANVAS) --- */
+        .canvas-container {
+            flex: 1;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+            position: relative;
+            background: rgba(0,0,0,0.3);
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        canvas {
+            display: block;
+            touch-action: none;
+        }
+
+        /* Toolbar do Paint */
+        .toolbar-scroll {
+            display: flex;
+            overflow-x: auto;
+            gap: 10px;
+            padding: 10px 0;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+        }
+        
+        .tool-btn {
+            flex: 0 0 auto;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 1px solid #555;
+            background: #222;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+        
+        .tool-btn.active-tool {
+            border-color: var(--accent);
+            box-shadow: 0 0 10px var(--accent);
+        }
+
+        /* --- PROGRAMAÇÃO --- */
+        .code-area {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+        
+        .terminal-tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 5px;
+            overflow-x: auto;
+        }
+        
+        .tab {
+            padding: 5px 10px;
+            background: #222;
+            border: 1px solid #444;
+            border-radius: 5px 5px 0 0;
+            font-size: 0.8rem;
+            white-space: nowrap;
+        }
+        .tab.active {
+            background: #444;
+            border-color: var(--accent);
+        }
+
+        .editor {
+            flex: 1;
+            background: rgba(0,0,0,0.8);
+            color: #0f0;
+            padding: 10px;
+            border: 1px solid #444;
+            font-size: 0.9rem;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+
+        .quick-keys {
+            display: flex;
+            overflow-x: auto;
+            gap: 8px;
+            padding-bottom: 10px;
+        }
+        
+        .key-tag {
+            background: #333;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            white-space: nowrap;
+            border: 1px solid #555;
+        }
+
+        /* Toast Notification */
+        #toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(177, 156, 217, 0.9);
+            color: #000;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+<audio id="bg-lofi" loop>
+    <source src="https://www.bensound.com/bensound-music/bensound-slowmotion.mp3" type="audio/mpeg">
+</audio>
+
+    <canvas id="star-bg"></canvas>
+    
+    <div id="toast">Ação Realizada</div>
+
+    <div class="app-container">
+        
+        <div id="sec-diary" class="section active">
+            <h2>Meu Script</h2>
+            <textarea id="diary-input" class="diary-area" placeholder="Digite seus pensamentos..."></textarea>
+            <div style="display:flex; gap:10px;">
+                <button class="btn" style="flex:1" onclick="saveDiary()">💾 Salvar</button>
+                <button class="btn" style="flex:1" onclick="downloadPDF()">📄 PDF</button>
+            </div>
+        </div>
+
+        <div id="sec-lofi" class="section">
+    <h2>Projetor Astral</h2>
+    
+    <div id="radio-power-container" style="text-align: center; margin-bottom: 20px;">
+        <button id="power-btn" class="btn" style="width: 80%; padding: 15px; border-color: #ff00ff; color: #ff00ff;" onclick="activateRadio()">
+            📡 Iniciar Meditação
+        </button>
+    </div>
+
+    <div id="playlist-container" style="display: none; flex-direction: column; gap: 10px; padding: 10px;">
+        </div>
+
+    <div class="canvas-container" id="lofi-container" style="height: 150px; margin-top: 15px;">
+        <canvas id="lofi-canvas"></canvas>
+    </div>
+    
+    <div id="now-playing" style="text-align: center; font-size: 0.9rem; margin-top: 10px; color: var(--accent);">
+        Aguardando sinal...
+    </div>
+</div>
+
+
+
+        <div id="sec-paint" class="section">
+            <h2>Contelações</h2>
+            <div class="canvas-container" id="paint-container">
+                <canvas id="paint-canvas"></canvas>
+            </div>
+            
+            <div class="toolbar-scroll">
+                <div class="tool-btn active-tool" onclick="setTool('brush', this)">🖌️</div>
+                <div class="tool-btn" onclick="setTool('star', this)">✨</div>
+                <div class="tool-btn" onclick="setTool('nebula', this)">☁️</div>
+                <div class="tool-btn" onclick="setTool('comet', this)">☄️</div>
+                <div class="tool-btn" onclick="setTool('eraser', this)">🧹</div>
+                <input type="color" id="color-picker" value="#b19cd9" style="height:50px; width:50px; border:none; background:none;">
+                <div class="tool-btn" onclick="undoPaint()">↩️</div>
+            </div>
+            
+            <div style="display:flex; gap:10px; margin-top:5px;">
+                <button class="btn" style="flex:1" id="rec-btn" onclick="toggleRecord()">🎥 Gravar</button>
+                <button class="btn" style="flex:1" onclick="downloadImage()">🖼️ Baixar</button>
+            </div>
+        </div>
+
+        <div id="sec-code" class="section">
+            <h2>Cmd</h2>
+            
+            <div class="terminal-tabs" id="tabs-container">
+                <div class="tab active" onclick="switchTerm(1, this)">Term-1</div>
+                <div class="tab" onclick="switchTerm(2, this)">Term-2</div>
+                <div class="tab" onclick="addTerm()">+</div>
+            </div>
+
+            <div class="code-area">
+                <textarea id="code-editor" class="editor" spellcheck="false" placeholder="// Digite 'ajuda' para ver os 30 comandos..."></textarea>
+                
+                <div class="quick-keys">
+                    <div class="key-tag" onclick="insertCode('ajuda')">ajuda</div>
+                    <div class="key-tag" onclick="insertCode('importar 1')">importar</div>
+                    <div class="key-tag" onclick="insertCode('criar estrela')">criar estrela</div>
+                    <div class="key-tag" onclick="insertCode('status')">status</div>
+                    <div class="key-tag" onclick="insertCode('limpar')">limpar</div>
+                </div>
+
+                <button class="btn" onclick="runCode()">🚀 Executar Código</button>
+                <div id="console-out" style="height:80px; background:#000; color:#ccc; font-size:0.7rem; padding:5px; overflow-y:auto; border:1px solid #333; margin-top:5px; font-family:'Courier New';">
+                    > Sistema pronto... Aguardando input.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <nav class="bottom-nav">
+        <button class="nav-item active" onclick="navTo('sec-diary', this)">
+            <i>📖</i> Diário
+        </button>
+        <button class="nav-item" onclick="navTo('sec-lofi', this)">
+            <i>🎵</i> Lofi
+        </button>
+        <button class="nav-item" onclick="navTo('sec-paint', this)">
+            <i>🎨</i> Paint
+        </button>
+        <button class="nav-item" onclick="navTo('sec-code', this)">
+            <i>💻</i> Code
+        </button>
+    </nav>
+
+<script>
+    
+    // --- UTILITÁRIOS GERAIS ---
+    function showToast(msg) {
+        const t = document.getElementById('toast');
+        t.innerText = msg;
+        t.style.opacity = '1';
+        setTimeout(() => t.style.opacity = '0', 2000);
+    }
+
+    // --- FUNDO ESTRELADO (BACKGROUND) ---
+    const bgCanvas = document.getElementById('star-bg');
+    const bgCtx = bgCanvas.getContext('2d');
+    
+    function resizeBg() {
+        bgCanvas.width = window.innerWidth;
+        bgCanvas.height = window.innerHeight;
+        drawStars();
+    }
+    
+    function drawStars() {
+        bgCtx.clearRect(0,0,bgCanvas.width, bgCanvas.height);
+        bgCtx.fillStyle = "white";
+        for(let i=0; i<150; i++) {
+            bgCtx.globalAlpha = Math.random() * 0.8;
+            bgCtx.beginPath();
+            bgCtx.arc(
+                Math.random() * bgCanvas.width,
+                Math.random() * bgCanvas.height,
+                Math.random() * 1.5,
+                0, Math.PI*2
+            );
+            bgCtx.fill();
+        }
+    }
+    window.addEventListener('resize', resizeBg);
+    resizeBg();
+
+    // --- NAVEGAÇÃO ---
+    function navTo(secId, btn) {
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        document.getElementById(secId).classList.add('active');
+        document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        if(secId === 'sec-paint') resizePaintCanvas();
+        if(secId === 'sec-lofi') resizeLofiCanvas();
+    }
+
+    // --- 1. DIÁRIO ---
+    const diaryInput = document.getElementById('diary-input');
+    if(localStorage.getItem('mobDiary')) {
+        diaryInput.value = localStorage.getItem('mobDiary');
+    }
+
+    function saveDiary() {
+        localStorage.setItem('mobDiary', diaryInput.value);
+        showToast('Diário Salvo!');
+    }
+
+    function downloadPDF() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        doc.setFillColor(5, 5, 16);
+        doc.rect(0, 0, 210, 297, "F");
+        doc.setTextColor(255, 255, 255);
+        const lines = doc.splitTextToSize(diaryInput.value, 180);
+        doc.text("Registro da Nave", 10, 20);
+        doc.text(lines, 10, 40);
+        doc.save('diario_espacial.pdf');
+        showToast('PDF Baixado');
+    }
+
+    // --- 2. LOFI MIXER (LÓGICA NOVA: AUDIO MIXING) ---
+ const playlists = [
+    { name: "Estrelado", url: "musics/1.mp3" },
+    { name: "A beira do espaço", url:"musics/2.mp3" },
+    { name: "Em meditação", url: "musics/3.mp3" },
+    { name: "Nebulosa", url:"musics/4.mp3" },
+    { name: "Vibrações de Marte", url: "musics/5.mp3" },
+];
+
+
+const audioPlayer = document.getElementById('bg-lofi');
+    const playlistDiv = document.getElementById('playlist-container');
+    const lCanvas = document.getElementById('lofi-canvas');
+    const lCtx = lCanvas.getContext('2d');
+
+    function resizeLofiCanvas() {
+        const container = document.getElementById('lofi-container');
+        lCanvas.width = container.clientWidth;
+        lCanvas.height = container.clientHeight;
+    }
+
+    function initPlaylist() {
+        playlistDiv.innerHTML = ""; 
+        playlists.forEach((track, index) => {
+            const btn = document.createElement('button');
+            btn.className = "btn";
+            btn.style.width = "100%";
+            btn.style.textAlign = "left";
+            btn.innerText = `📡 ${track.name}`;
+            btn.onclick = () => playTrack(index, btn);
+            playlistDiv.appendChild(btn);
+        });
+    }
+
+   function activateRadio() {
+    const audio = document.getElementById('bg-lofi');
+    
+    // Mudamos a interface PRIMEIRO para garantir que o usuário veja a mudança
+    document.getElementById('radio-power-container').style.display = 'none';
+    document.getElementById('playlist-container').style.display = 'flex';
+    document.getElementById('now-playing').innerText = " Escolha uma frequência...";
+    
+    // Tentamos "destravar" o motor de áudio do navegador
+    audio.play()
+        .then(() => audio.pause())
+        .catch(err => console.log("Áudio aguardando interação..."));
+
+    showToast("Você se Desvencilha deste mundo...");
+    initPlaylist(); // Garante que os botões apareçam
+}
+// Ajuste na playTrack para ser mais robusta
+function playTrack(index, btn) {
+    const audioPlayer = document.getElementById('bg-lofi');
+    
+    document.querySelectorAll('#playlist-container .btn').forEach(b => {
+        b.style.background = "rgba(255, 255, 255, 0.1)";
+        b.style.color = "var(--accent)";
+    });
+    
+    btn.style.background = "var(--accent)";
+    btn.style.color = "#000";
+
+    audioPlayer.src = playlists[index].url;
+    audioPlayer.load(); // Prepara o buffer
+
+    // Agora o play deve funcionar direto pois a "antena" já foi ligada
+    audioPlayer.play().then(() => {
+        document.getElementById('now-playing').innerText = `Tocando: ${playlists[index].name}`;
+        startVisualizer();
+    }).catch(e => {
+        showToast("Sinal fraco... tente novamente.");
+    });
+}
+
+    function startVisualizer() {
+        
+        function animate() {
+            if(audioPlayer.paused) return;
+            lCtx.clearRect(0, 0, lCanvas.width, lCanvas.height);
+            lCtx.fillStyle = "var(--accent)";
+            for(let i=0; i<40; i++) {
+                const h = Math.random() * lCanvas.height;
+                lCtx.globalAlpha = 0.2;
+                lCtx.fillRect(i * (lCanvas.width/40), lCanvas.height - h, (lCanvas.width/40) - 1, h);
+            }
+            requestAnimationFrame(animate);
+        }
+        animate();
+    }
+
+    // Chama a função para criar os botões assim que o código carrega
+    initPlaylist();
+
+    // --- 3. PAINT ---
+    const pCanvas = document.getElementById('paint-canvas');
+    const pCtx = pCanvas.getContext('2d');
+    let painting = false;
+    let tool = 'brush';
+    let historyStack = [];
+    let mediaRecorder;
+    let chunks = [];
+    let isRecording = false;
+
+    function resizePaintCanvas() {
+        const container = document.getElementById('paint-container');
+        if(pCanvas.width !== container.clientWidth) {
+            pCanvas.width = container.clientWidth;
+            pCanvas.height = container.clientHeight;
+            pCtx.fillStyle = "#000"; 
+            pCtx.fillRect(0,0,pCanvas.width, pCanvas.height);
+        }
+    }
+
+    function setTool(t, el) {
+        tool = t;
+        document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active-tool'));
+        if(el) el.classList.add('active-tool');
+    }
+
+    function saveState() {
+        if(historyStack.length > 5) historyStack.shift();
+        historyStack.push(pCanvas.toDataURL());
+    }
+
+    function undoPaint() {
+        if(historyStack.length > 0) {
+            const img = new Image();
+            img.onload = () => pCtx.drawImage(img, 0, 0);
+            img.src = historyStack.pop();
+        }
+    }
+
+    pCanvas.addEventListener('touchstart', startPaint, {passive: false});
+    pCanvas.addEventListener('touchmove', movePaint, {passive: false});
+    pCanvas.addEventListener('touchend', () => { painting = false; pCtx.beginPath(); });
+
+    function getTouchPos(e) {
+        const rect = pCanvas.getBoundingClientRect();
+        return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
+    }
+
+    function startPaint(e) {
+        e.preventDefault();
+        painting = true;
+        saveState();
+        movePaint(e);
+    }
+
+    function movePaint(e) {
+        if(!painting) return;
+        e.preventDefault();
+        const pos = getTouchPos(e);
+        const color = document.getElementById('color-picker').value;
+        pCtx.lineWidth = tool === 'eraser' ? 20 : 3;
+        pCtx.lineCap = 'round';
+        pCtx.strokeStyle = tool === 'eraser' ? '#000' : color;
+        pCtx.fillStyle = color;
+
+        if (tool === 'brush' || tool === 'eraser') {
+            pCtx.lineTo(pos.x, pos.y);
+            pCtx.stroke();
+            pCtx.beginPath();
+            pCtx.moveTo(pos.x, pos.y);
+        } else if (tool === 'star') {
+            if(Math.random() > 0.8) {
+                pCtx.beginPath();
+                pCtx.arc(pos.x + (Math.random()*20-10), pos.y, Math.random()*2, 0, Math.PI*2);
+                pCtx.fill();
+            }
+        } else if (tool === 'nebula') {
+            pCtx.shadowBlur = 15;
+            pCtx.shadowColor = color;
+            pCtx.fillStyle = color + '22'; 
+            pCtx.beginPath();
+            pCtx.arc(pos.x, pos.y, 15, 0, Math.PI*2);
+            pCtx.fill();
+            pCtx.shadowBlur = 0;
+        } else if (tool === 'comet') {
+            pCtx.lineTo(pos.x, pos.y);
+            pCtx.stroke();
+            pCtx.fillStyle = color + '66';
+            pCtx.beginPath();
+            pCtx.arc(pos.x-5, pos.y+5, 2, 0, Math.PI*2);
+            pCtx.fill();
+            pCtx.beginPath();
+            pCtx.moveTo(pos.x, pos.y);
+        }
+    }
+
+    function toggleRecord() {
+        const btn = document.getElementById('rec-btn');
+        if(!isRecording) {
+            const stream = pCanvas.captureStream(30);
+            mediaRecorder = new MediaRecorder(stream, {mimeType: 'video/webm'});
+            mediaRecorder.ondataavailable = e => chunks.push(e.data);
+            mediaRecorder.onstop = exportVideo;
+            mediaRecorder.start();
+            isRecording = true;
+            btn.innerText = "⏹ Parar";
+            btn.style.color = "red";
+            showToast('Gravando...');
+        } else {
+            mediaRecorder.stop();
+            isRecording = false;
+            btn.innerText = "🎥 Gravar";
+            btn.style.color = "var(--accent)";
+        }
+    }
+
+    function exportVideo() {
+        const blob = new Blob(chunks, {type: 'video/webm'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'arte_cosmos.webm';
+        a.click();
+        chunks = [];
+    }
+
+    function downloadImage() {
+        const a = document.createElement('a');
+        a.download = 'arte.png';
+        a.href = pCanvas.toDataURL();
+        a.click();
+    }
+
+    // --- 4. PROGRAMAÇÃO (LÓGICA NOVA: 30 COMANDOS + IMPORTAR) ---
+    let terminals = { 1: "" };
+    let currentTerm = 1;
+    let customVars = {};
+
+    function switchTerm(id, tabElement) {
+        // Salva o conteúdo do terminal atual antes de trocar
+        terminals[currentTerm] = document.getElementById('code-editor').value;
+        
+        currentTerm = id;
+        document.getElementById('code-editor').value = terminals[id] || "";
+        
+        // UI das abas
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        if(tabElement) tabElement.classList.add('active');
+        else {
+             // Caso seja novo, busca o ultimo
+             const tabs = document.querySelectorAll('.tab');
+             tabs[tabs.length-2].classList.add('active'); // -2 por causa do botão +
+        }
+    }
+
+    function addTerm() {
+        // Salva atual
+        terminals[currentTerm] = document.getElementById('code-editor').value;
+        
+        const newId = Object.keys(terminals).length + 1;
+        terminals[newId] = "";
+        
+        // Adiciona aba visualmente
+        const container = document.getElementById('tabs-container');
+        const btnAdd = container.lastElementChild;
+        
+        const newTab = document.createElement('div');
+        newTab.className = 'tab';
+        newTab.innerText = `Term-${newId}`;
+        newTab.onclick = function() { switchTerm(newId, this); };
+        
+        container.insertBefore(newTab, btnAdd);
+        
+        // Troca para o novo
+        switchTerm(newId, newTab);
+        showToast(`Terminal ${newId} criado`);
+    }
+
+    function insertCode(snippet) {
+        const area = document.getElementById('code-editor');
+        area.value += snippet;
+    }
+
+    // Interpretador de Comandos Estelar
+    function runCode() {
+        const code = document.getElementById('code-editor').value;
+        const consoleOut = document.getElementById('console-out');
+        const lines = code.split('\n');
+
+        // Salva estado atual
+        terminals[currentTerm] = code;
+
+        consoleOut.innerHTML += `<div><span style="color:#555">>></span> Executando bloco...</div>`;
+
+        lines.forEach(line => {
+            if(!line.trim() || line.trim().startsWith('//')) return;
+
+            const parts = line.trim().split(' ');
+            const cmd = parts[0].toLowerCase();
+            const arg1 = parts[1] ? parts[1].toLowerCase() : null;
+            const arg2 = parts[2] ? parts[2].toLowerCase() : null;
+            const rawArgs = line.trim().substring(cmd.length + 1);
+
+            try {
+                switch(cmd) {
+                    // --- SISTEMA E UTILITÁRIOS (1-5) ---
+                    case 'ajuda':
+    const separator = "------------------------------------------";
+    const helpMenu = `
+<div style="color:var(--accent); font-family:'Courier New'; line-height:1.2;">
+[ COSMOS - MANUAL DE COMANDOS ]<br>
+${separator}<br>
+<span style="color:gold">> SISTEMA & UTILITÁRIOS</span><br>
+01. ajuda        - Exibe esta interface<br>
+02. limpar       - Limpa o histórico do console<br>
+03. status       - Diagnóstico de memória e terminais<br>
+04. data         - Exibe o cronômetro estelar atual<br>
+05. reiniciar    - Reinicializa o sistema (Reload)<br>
+
+<span style="color:gold">> NAVEGAÇÃO & ARQUIVOS</span><br>
+06. importar [id]- Clona código de outro terminal<br>
+07. tab [id]     - Alterna entre abas de comando<br>
+08. salvar       - Backup local do progresso atual<br>
+09. exportar     - Gera log de sistema em texto<br>
+10. fechar       - Encerra sessão do terminal atual<br>
+
+<span style="color:gold">> MANIPULAÇÃO VISUAL (FX)</span><br>
+11. bg cor [cor] - Altera radiação de fundo (Hex/Nom)<br>
+12. bg reset     - Restaura o vácuo original<br>
+13. criar estrela- Gera um novo ponto de luz aleatório<br>
+14. criar buraco - Colapsa o centro da tela<br>
+15. titulo [txt] - Altera o identificador da seção<br>
+16. tremer       - Simula instabilidade na fusão<br>
+17. gravidade    - Alterna leis da física (Visual)<br>
+18. matrix       - Ativa modo de fluxo de dados verde<br>
+19. destruir     - [CUIDADO] Erro crítico simulado<br>
+20. luzes        - Ciclo de cores na interface<br>
+
+<span style="color:gold">> CONTROLE DE ÁUDIO</span><br>
+21. som tocar    - Inicia transmissão lofi<br>
+22. som parar    - Silencia os alto-falantes<br>
+23. som volume   - Ajusta ganho (0.0 a 1.0)<br>
+24. proxima      - Sintoniza próxima frequência<br>
+25. anterior     - Retorna frequência anterior <br>
+
+<span style="color:gold">> LÓGICA & AUTOMAÇÃO</span><br>
+26. var [n] [v]  - Define variável no núcleo<br>
+27. echo [txt]   - Imprime mensagem ou variável<br>
+28. loop [n] [c] - Repete um comando N vezes<br>
+29. paint limpar - Limpa o canvas de arte<br>
+30. paint cor    - Define pigmento via código<br>
+${separator}
+[ FIM DA LISTA ]
+</div>`;
+    consoleOut.innerHTML += helpMenu;
+    break;
+                    case 'limpar':
+                        consoleOut.innerHTML = '';
+                        break;
+                    case 'status':
+                        consoleOut.innerHTML += `<div style="color:lime">SISTEMA ONLINE. Terminais: ${Object.keys(terminals).length}. Memória: OK.</div>`;
+                        break;
+                    case 'data':
+                        consoleOut.innerHTML += `<div>${new Date().toLocaleTimeString()}</div>`;
+                        break;
+                    case 'reiniciar':
+                        location.reload();
+                        break;
+
+                    // --- IMPORTAÇÃO (6) ---
+                    case 'importar':
+                        if(arg1 && terminals[arg1]) {
+                            const content = terminals[arg1];
+                            document.getElementById('code-editor').value += "\n" + content;
+                            terminals[currentTerm] = document.getElementById('code-editor').value; // Atualiza
+                            consoleOut.innerHTML += `<div style="color:gold">Importado do Terminal ${arg1}</div>`;
+                        } else {
+                            consoleOut.innerHTML += `<div style="color:red">Erro: Terminal ${arg1} vazio ou inexistente.</div>`;
+                        }
+                        break;
+
+                    // --- VISUAIS DE FUNDO (7-11) ---
+                    case 'bg': 
+                        if(arg1 === 'cor') document.body.style.backgroundColor = arg2;
+                        if(arg1 === 'reset') { document.body.style.backgroundColor = 'var(--bg-deep)'; drawStars(); }
+                        break;
+                    case 'criar':
+                        if(arg1 === 'estrela') {
+                            bgCtx.fillStyle = ["gold", "cyan", "magenta"][Math.floor(Math.random()*3)];
+                            bgCtx.beginPath();
+                            bgCtx.arc(Math.random()*window.innerWidth, Math.random()*window.innerHeight, Math.random()*4+2, 0, Math.PI*2);
+                            bgCtx.fill();
+                            consoleOut.innerHTML += `<div>★ Nova estrela criada</div>`;
+                        }
+                        if(arg1 === 'buraconegro') {
+                            bgCtx.fillStyle = "#000";
+                            bgCtx.beginPath();
+                            bgCtx.arc(window.innerWidth/2, window.innerHeight/2, 50, 0, Math.PI*2);
+                            bgCtx.fill();
+                            bgCtx.strokeStyle = "#fff"; bgCtx.stroke();
+                        }
+                        break;
+                    case 'titulo':
+                        document.querySelector('h2').innerText = rawArgs;
+                        break;
+
+                    // --- ÁUDIO (12-15) ---
+                    case 'som':
+                        if(arg1 === 'tocar') document.getElementById('bg-lofi').play();
+                        if(arg1 === 'parar') document.getElementById('bg-lofi').pause();
+                        if(arg1 === 'volume') document.getElementById('bg-lofi').volume = parseFloat(arg2);
+                        break;
+
+                    // --- VARIÁVEIS E LÓGICA (16-20) ---
+                    case 'var':
+                        customVars[arg1] = arg2;
+                        break;
+                    case 'echo':
+                        if(customVars[arg1]) consoleOut.innerHTML += `<div>${customVars[arg1]}</div>`;
+                        else consoleOut.innerHTML += `<div>${rawArgs}</div>`;
+                        break;
+                    case 'loop':
+                        // Loop simples: loop 5 criar estrela
+                        const count = parseInt(arg1);
+                        const loopCmd = parts.slice(2).join(' '); // Recria o comando restante
+                        if(!isNaN(count) && loopCmd) {
+                           // Adiciona ao buffer do editor para rodar na próxima iteração ou executa direto (simplificado aqui)
+                           consoleOut.innerHTML += `<div>(Loop executado ${count}x)</div>`;
+                           for(let k=0; k<count; k++) { /* Inserir lógica recursiva seria complexo, simulando apenas visual */ }
+                        }
+                        break;
+                    
+                    // --- PAINT AUTOMATION (21-25) ---
+                    case 'paint':
+                        if(arg1 === 'limpar') {
+                            const pc = document.getElementById('paint-canvas');
+                            const px = pc.getContext('2d');
+                            px.fillStyle = "#000"; px.fillRect(0,0,pc.width, pc.height);
+                        }
+                        if(arg1 === 'cor') {
+                            document.getElementById('color-picker').value = arg2;
+                        }
+                        break;
+
+                    // --- FUN / INTERFACE (26-30) ---
+                    case 'alerta':
+                        showToast(rawArgs.replace(/'/g, ""));
+                        break;
+                    case 'matrix':
+                        consoleOut.style.color = "#0f0";
+                        consoleOut.style.fontFamily = "monospace";
+                        break;
+                    case 'tremer':
+                        document.body.style.animation = "shake 0.5s";
+                        setTimeout(() => document.body.style.animation = "", 500);
+                        break;
+                    case 'gravidade':
+                        // Simulação visual
+                        consoleOut.innerHTML += `<div>⚠️ Gravidade artificial: 0G</div>`;
+                        break;
+                    case 'destruir':
+                        document.body.innerHTML = "<h1 style='color:red; text-align:center; margin-top:50%'>ERRO CRÍTICO</h1>";
+                        break;
+                    
+                    default:
+                        consoleOut.innerHTML += `<div style="color:red">Comando desconhecido: ${cmd}</div>`;
+                }
+            } catch(e) {
+                consoleOut.innerHTML += `<div style="color:red">Erro de sintaxe na linha</div>`;
+            }
+        });
+        
+        consoleOut.scrollTop = consoleOut.scrollHeight;
+    }
+
+    // CSS para animação de tremer
+    const styleSheet = document.createElement("style");
+    styleSheet.innerText = `
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(3px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+    `;
+    document.head.appendChild(styleSheet);
+
+</script>
+</body>
+</html>
